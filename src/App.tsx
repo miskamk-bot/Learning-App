@@ -1,75 +1,89 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { LearningEntry } from './types';
 import { LearningEntryCard } from './components/LearningEntryCard';
+
+const API_URL = 'http://localhost:3001/api/entries';
 
 function App() {
   const [entries, setEntries] = useState<LearningEntry[]>([]);
   const [fetchError, setFetchError] = useState('');
 
-  // Lomakkeen tilamuuttujat (Flip 2)
   const [topic, setTopic] = useState('');
   const [date, setDate] = useState('');
   const [learned, setLearned] = useState('');
   const [confidence, setConfidence] = useState<number>(3);
   const [notes, setNotes] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [formError, setFormError] = useState('');
 
-  // 1. Tietojen haku backendistä napin painalluksella
-  const handleFetchEntries = async () => {
+  const fetchEntries = async () => {
     setFetchError('');
     try {
-      const response = await fetch('http://localhost:3001/api/entries');
+      const response = await fetch(API_URL);
       if (!response.ok) {
-        throw new Error('Palvelinvirhe haettaessa tietoja.');
+        throw new Error(`Palvelinvirhe: ${response.status}`);
       }
       const data: LearningEntry[] = await response.json();
       setEntries(data);
     } catch (err: any) {
-      setFetchError('Tietojen haku palvelimelta epäonnistui. Varmista, että backend on käynnissä.');
+      setFetchError(err.message || 'Tietojen haku epäonnistui.');
     }
   };
 
-  // 2. Olemassa oleva Flip 2 -lomakkeen käsittely
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchEntries();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
+    setFormError('');
 
     if (!topic.trim() || !learned.trim() || !date.trim()) {
-      setErrorMessage('Aihe, päivämäärä ja opittu asia ovat pakollisia kenttiä.');
+      setFormError('Aihe, päivämäärä ja opittu asia ovat pakollisia kenttiä.');
       return;
     }
 
     if (confidence < 1 || confidence > 5) {
-      setErrorMessage('Confidence-arvon tulee olla väliltä 1–5.');
+      setFormError('Confidence-arvon tulee olla väliltä 1–5.');
       return;
     }
 
-    const newEntry: LearningEntry = {
-      id: Date.now().toString(),
-      topic: topic.trim(),
-      date,
-      learned: learned.trim(),
-      confidence: Number(confidence),
-      notes: notes.trim(),
-    };
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: topic.trim(),
+          date,
+          learned: learned.trim(),
+          confidence: Number(confidence),
+          notes: notes.trim()
+        })
+      });
 
-    setEntries((prevEntries) => [...prevEntries, newEntry]);
+      if (!response.ok) {
+        throw new Error(`Virhe tallennuksessa: ${response.status}`);
+      }
 
-    setTopic('');
-    setDate('');
-    setLearned('');
-    setConfidence(3);
-    setNotes('');
+      const createdEntry: LearningEntry = await response.json();
+      setEntries((prevEntries) => [...prevEntries, createdEntry]);
+
+      setTopic('');
+      setDate('');
+      setLearned('');
+      setConfidence(3);
+      setNotes('');
+    } catch (err: any) {
+      setFormError(err.message || 'Virhe tallennettaessa tietoja.');
+    }
   };
 
   return (
     <div style={{ maxWidth: '600px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Miska Koivuniemi</h1>
 
-      {/* Flip 2 lomake */}
       <section style={{ marginBottom: '30px' }}>
         <h2>Lisää uusi merkintä</h2>
-        {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+        {formError && <p style={{ color: 'red' }}>{formError}</p>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div>
@@ -128,23 +142,11 @@ function App() {
         </form>
       </section>
 
-      {/* Nappi backendin tietojen hakemiseen */}
-      <section style={{ marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={handleFetchEntries}
-          style={{ padding: '10px 16px', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          Hae merkinnät palvelimelta
-        </button>
-        {fetchError && <p style={{ color: 'red', marginTop: '10px' }}>{fetchError}</p>}
-      </section>
-
-      {/* Renderöidään haetut merkinnät */}
       <main>
-        <h2>Merkinnät</h2>
-        {entries.length === 0 ? (
-          <p>Ei merkintöjä. Klikkaa yllä olevaa nappia hakeaksesi tiedot palvelimelta.</p>
+        <h2>Merkinnät tietokannasta</h2>
+        {fetchError && <p style={{ color: 'red' }}>{fetchError}</p>}
+        {entries.length === 0 && !fetchError ? (
+          <p>Ei merkintöjä tietokannassa.</p>
         ) : (
           entries.map((entry) => (
             <LearningEntryCard key={entry.id} entry={entry} />
