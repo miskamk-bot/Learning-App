@@ -3,25 +3,10 @@ import type { LearningEntry } from './types';
 import { LearningEntryCard } from './components/LearningEntryCard';
 
 function App() {
-  const [entries, setEntries] = useState<LearningEntry[]>([
-    {
-      id: '1',
-      topic: 'React-komponentit',
-      date: '2026-11-01',
-      learned: 'Opettelin tekemään komponentin ja jakamaan käyttöliittymän osiin.',
-      confidence: 4,
-      notes: 'Tuntuu jo melko sujuvalta.',
-    },
-    {
-      id: '2',
-      topic: 'TypeScript ja Propsit',
-      date: '2026-11-03',
-      learned: 'Lisäsin tyypit propseille ja loin selkeät rajapinnat.',
-      confidence: 3,
-      notes: 'Vaatii vielä hieman harjoittelua.',
-    },
-  ]);
+  const [entries, setEntries] = useState<LearningEntry[]>([]);
+  const [fetchError, setFetchError] = useState('');
 
+  // Lomakkeen tilamuuttujat (Flip 2)
   const [topic, setTopic] = useState('');
   const [date, setDate] = useState('');
   const [learned, setLearned] = useState('');
@@ -29,6 +14,22 @@ function App() {
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // 1. Tietojen haku backendistä napin painalluksella
+  const handleFetchEntries = async () => {
+    setFetchError('');
+    try {
+      const response = await fetch('http://localhost:3001/api/entries');
+      if (!response.ok) {
+        throw new Error('Palvelinvirhe haettaessa tietoja.');
+      }
+      const data: LearningEntry[] = await response.json();
+      setEntries(data);
+    } catch (err: any) {
+      setFetchError('Tietojen haku palvelimelta epäonnistui. Varmista, että backend on käynnissä.');
+    }
+  };
+
+  // 2. Olemassa oleva Flip 2 -lomakkeen käsittely
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -65,6 +66,7 @@ function App() {
     <div style={{ maxWidth: '600px', margin: '40px auto', fontFamily: 'sans-serif' }}>
       <h1>Miska Koivuniemi</h1>
 
+      {/* Flip 2 lomake */}
       <section style={{ marginBottom: '30px' }}>
         <h2>Lisää uusi merkintä</h2>
         {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
@@ -126,11 +128,28 @@ function App() {
         </form>
       </section>
 
+      {/* Nappi backendin tietojen hakemiseen */}
+      <section style={{ marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={handleFetchEntries}
+          style={{ padding: '10px 16px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Hae merkinnät palvelimelta
+        </button>
+        {fetchError && <p style={{ color: 'red', marginTop: '10px' }}>{fetchError}</p>}
+      </section>
+
+      {/* Renderöidään haetut merkinnät */}
       <main>
         <h2>Merkinnät</h2>
-        {entries.map((entry) => (
-          <LearningEntryCard key={entry.id} entry={entry} />
-        ))}
+        {entries.length === 0 ? (
+          <p>Ei merkintöjä. Klikkaa yllä olevaa nappia hakeaksesi tiedot palvelimelta.</p>
+        ) : (
+          entries.map((entry) => (
+            <LearningEntryCard key={entry.id} entry={entry} />
+          ))
+        )}
       </main>
     </div>
   );
