@@ -1,32 +1,34 @@
-# React + TypeScript + Vite
+# Learning App
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Oppimispäiväkirjasovellus (React, TypeScript, Express ja MariaDB).
 
-Currently, two official plugins are available:
+## Sivut ja komponentit
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+* **Sivut (`src/pages/`):**
+  * `HomePage.tsx`: Etusivu, josta pääsee siirtymään merkintöihin.
+  * `EntriesPage.tsx`: Näyttää lomakkeen ja listan kaikista merkinnöistä.
+* **Komponentit (`src/components/`):**
+  * `Navbar.tsx`: Yläpalkin navigaatio (`Home` ja `Entries` -linkit).
+  * `EntryForm.tsx`: Lomake uuden merkinnän lisäämiseen.
+  * `LearningEntryCard.tsx`: Yksittäisen merkinnän kortti.
 
-## React Compiler
+## Sovelluskerrokset
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Frontend (React):** Näyttää käyttöliittymän ja hoitaa sivujen reitityksen.
+2. **Backend (Express):** Vastaanottaa pyynnöt, tarkistaa syötteet ja keskustelee tietokannan kanssa.
+3. **Tietokanta (MariaDB):** Tallentaa merkinnät pysyvästi `entries`-tauluun.
 
-## Expanding the Oxlint configuration
+## Frontend- vs. Backend-reitit
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+* **Frontend-reitit (React Router):** Vaihtavat näkymää selaimessa ilman sivun uudelleenlatausta (`/` ja `/entries`).
+* **Backend-reitit (API):** Käsittelevät tietokantapyyntöjä palvelimella (`GET /api/entries` hakee merkinnät ja `POST /api/entries` tallentaa uuden).
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+## Miksi REST sopii tähän sovellukseen?
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+REST on selkeä ja kevyt tapa siirtää JSON-dataa selaimen ja palvelimen välillä standardeilla HTTP-metodeilla (`GET` ja `POST`), ja se pitää käyttöliittymän ja palvelimen selkeästi erillään.
+
+## Tilanhallinta ja pysyvä tallennus (Submission 6)
+
+* **Paikallinen tila (Local state – `useState`):** Lomakkeen syötekentät (`EntryForm.tsx`) pidetään lomakkeen omassa tilassa, koska niitä ei tarvita muualla ennen lähetystä.
+* **Jaettu tila (Shared state – Zustand):** Merkintälista (`entries`) ja `setEntries` ovat Zustand-storessa (`src/store/useEntriesStore.ts`), josta sivut voivat lukea ne helposti.
+* **Pysyvä tallennus (MariaDB):** Lomake lähettää tiedot `POST`-kutsulla MariaDB-tietokantaan ja päivittää listan `GET`-kutsulla, joten merkinnät säilyvät myös sivun päivityksen jälkeen.
